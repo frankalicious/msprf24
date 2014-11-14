@@ -38,7 +38,7 @@
      Also specify # clock cycles for 5ms, 10us and 130us sleeps.
  */
 /* Private library variables */
-uint8_t rf_feature;  // Used to track which features have been enabled
+uint8_t rf_feature;  /* Used to track which features have been enabled */
 
 /* CE (Chip Enable/RF transceiver activate signal) and CSN (SPI chip-select) operations. */
 #define CSN_EN nrfCSNportout &= ~nrfCSNpin
@@ -46,7 +46,17 @@ uint8_t rf_feature;  // Used to track which features have been enabled
 #define CE_EN nrfCEportout |= nrfCEpin
 #define CE_DIS nrfCEportout &= ~nrfCEpin
 
-
+inline uint8_t _msprf24_crc_mask(void);
+inline uint8_t _msprf24_irq_mask(void);
+#if   nrfIRQport == 2
+void P2_IRQ (void);
+#elif nrfIRQport == 1
+void P1_IRQ (void);
+#elif nrfIRQport == 3 && defined(P3IV_)
+void P3_IRQ (void);
+#elif nrfIRQport == 4 && defined(P4IV_)
+void P4_IRQ (void)
+#endif
 
 /* SPI drivers now supplied by msp430_spi.c */
 
@@ -91,10 +101,10 @@ void w_rx_addr(uint8_t pipe, uint8_t *addr)
 	int i;
 
 	if (pipe > 5)
-		return;  // Only 6 pipes available
+		return;  /* Only 6 pipes available */
 	CSN_EN;
 	rf_status = spi_transfer((RF24_RX_ADDR_P0 + pipe) | RF24_W_REGISTER);
-	if (pipe > 1) {  // Pipes 2-5 differ from pipe1's addr only in the LSB.
+	if (pipe > 1) {  /* Pipes 2-5 differ from pipe1's addr only in the LSB. */
 		spi_transfer(addr[rf_addr_width-1]);
 	} else {
 		for (i=rf_addr_width-1; i>=0; i--) {
@@ -108,8 +118,8 @@ void w_tx_payload(uint8_t len, uint8_t *data)
 {
 	uint16_t i=0;
 	CSN_EN;
-	if (len % 2) {  // Odd payload size?  Make it even by stuffing the command in a 16-bit xfer
-		// Borrowing 'i' to extract STATUS...
+	if (len % 2) {  /* Odd payload size?  Make it even by stuffing the command in a 16-bit xfer */
+		/* Borrowing 'i' to extract STATUS... */
 		i = spi_transfer16( (RF24_W_TX_PAYLOAD << 8) | (0x00FF & data[0]) );
 		rf_status = (i & 0xFF00) >> 8;
 		i = 1;
@@ -117,7 +127,7 @@ void w_tx_payload(uint8_t len, uint8_t *data)
 		rf_status = spi_transfer(RF24_W_TX_PAYLOAD);
 	}
 	for (; i < len; i+=2) {
-		// SPI transfers MSB first
+		/* SPI transfers MSB first */
 		spi_transfer16( (data[i] << 8) | (0x00FF & data[i+1]) );
 	}
 	CSN_DIS;
@@ -127,11 +137,11 @@ void w_tx_payload_noack(uint8_t len, uint8_t *data)
 {
 	uint16_t i=0;
 
-	if ( !(rf_feature & RF24_EN_DYN_ACK) )  // DYN ACK must be enabled to allow NOACK packets
+	if ( !(rf_feature & RF24_EN_DYN_ACK) )  /* DYN ACK must be enabled to allow NOACK packets */
 		return;
 	CSN_EN;
 	if (len % 2) {
-		// Borrowing 'i' to extract STATUS...
+		/* Borrowing 'i' to extract STATUS... */
 		i = spi_transfer16( (RF24_W_TX_PAYLOAD_NOACK << 8) | (0x00FF & data[0]) );
 		rf_status = (i & 0xFF00) >> 8;
 		i = 1;
@@ -139,13 +149,13 @@ void w_tx_payload_noack(uint8_t len, uint8_t *data)
 		rf_status = spi_transfer(RF24_W_TX_PAYLOAD_NOACK);
 	}
 	for (; i < len; i+=2) {
-		// SPI transfers MSB first
+		/* SPI transfers MSB first */
 		spi_transfer16( (data[i] << 8) | (0x00FF & data[i+1]) );
 	}
 	CSN_DIS;
 }
 
-uint8_t r_rx_peek_payload_size()
+uint8_t r_rx_peek_payload_size(void)
 {
 	uint16_t i;
 
@@ -161,7 +171,7 @@ uint8_t r_rx_payload(uint8_t len, uint8_t *data)
 	uint16_t i=0,j;
 	CSN_EN;
 	if (len % 2) {
-		// Borrowing 'i' to extract STATUS...
+		/* Borrowing 'i' to extract STATUS... */
 		i = spi_transfer16((RF24_R_RX_PAYLOAD << 8) | RF24_NOP);
 		rf_status = (i & 0xFF00) >> 8;
 		data[0] = i & 0x00FF;
@@ -171,37 +181,37 @@ uint8_t r_rx_payload(uint8_t len, uint8_t *data)
 	}
 	for (; i < len; i+=2) {
 		j = spi_transfer16(0xFFFF);
-		// SPI transfers MSB first
+		/* SPI transfers MSB first */
 		data[i] = (j & 0xFF00) >> 8;
 		data[i+1] = (j & 0x00FF);
 	}
 	CSN_DIS;
-	// The RX pipe this data belongs to is stored in STATUS
+	/* The RX pipe this data belongs to is stored in STATUS */
 	return ((rf_status & 0x0E) >> 1);
 }
 
-void flush_tx()
+void flush_tx(void)
 {
 	CSN_EN;
 	rf_status = spi_transfer(RF24_FLUSH_TX);
 	CSN_DIS;
 }
 
-void flush_rx()
+void flush_rx(void)
 {
 	CSN_EN;
 	rf_status = spi_transfer(RF24_FLUSH_RX);
 	CSN_DIS;
 }
 
-void tx_reuse_lastpayload()
+void tx_reuse_lastpayload(void)
 {
 	CSN_EN;
 	rf_status = spi_transfer(RF24_REUSE_TX_PL);
 	CSN_DIS;
 }
 
-inline void pulse_ce()
+inline void pulse_ce(void)
 {
 	CE_EN;
 	__delay_cycles(DELAY_CYCLES_15US);
@@ -226,11 +236,11 @@ void w_ack_payload(uint8_t pipe, uint8_t len, uint8_t *data)
 
 	if (pipe > 5)
 		return;
-	if ( !(rf_feature & RF24_EN_ACK_PAY) )  // ACK payloads must be enabled...
+	if ( !(rf_feature & RF24_EN_ACK_PAY) )  /* ACK payloads must be enabled... */
 		return;
 
 	if (len % 2) {
-		// Borrowing 'i' to extract STATUS...
+		/* Borrowing 'i' to extract STATUS... */
 		i = spi_transfer16( ((RF24_W_ACK_PAYLOAD | pipe) << 8) | (0x00FF & data[0]) );
 		rf_status = (i & 0xFF00) >> 8;
 		i = 1;
@@ -238,7 +248,7 @@ void w_ack_payload(uint8_t pipe, uint8_t len, uint8_t *data)
 		rf_status = spi_transfer(RF24_W_ACK_PAYLOAD | pipe);
 	}
 	for (; i < len; i+=2) {
-		// SPI transfers MSB first
+		/* SPI transfers MSB first */
 		spi_transfer16( (data[i] << 8) | (0x00FF & data[i+1]) );
 	}
 	CSN_DIS;
@@ -267,44 +277,44 @@ volatile uint8_t rf_irq;
 
 
 /* Library functions */
-void msprf24_init()
+void msprf24_init(void)
 {
-	// Setup SPI
+	/* Setup SPI */
 	spi_init();
-	_EINT();  // Enable interrupts (set GIE in SR)
+	_EINT();  /* Enable interrupts (set GIE in SR) */
 
-	// Setup IRQ
+	/* Setup IRQ */
 	#if nrfIRQport == 1
-		P1DIR &= ~nrfIRQpin;  // IRQ line is input
-		P1OUT |= nrfIRQpin;   // Pull-up resistor enabled
+		P1DIR &= ~nrfIRQpin;  /* IRQ line is input */
+		P1OUT |= nrfIRQpin;   /* Pull-up resistor enabled */
 		P1REN |= nrfIRQpin;
-		P1IES |= nrfIRQpin;   // Trigger on falling-edge
-		P1IFG &= ~nrfIRQpin;  // Clear any outstanding IRQ
-		P1IE |= nrfIRQpin;    // Enable IRQ interrupt
+		P1IES |= nrfIRQpin;   /* Trigger on falling-edge */
+		P1IFG &= ~nrfIRQpin;  /* Clear any outstanding IRQ */
+		P1IE |= nrfIRQpin;    /* Enable IRQ interrupt */
 	#elif nrfIRQport == 2
-		P2DIR &= ~nrfIRQpin;  // IRQ line is input
-		P2OUT |= nrfIRQpin;   // Pull-up resistor enabled
+		P2DIR &= ~nrfIRQpin;  /* IRQ line is input */
+		P2OUT |= nrfIRQpin;   /* Pull-up resistor enabled */
 		P2REN |= nrfIRQpin;
-		P2IES |= nrfIRQpin;   // Trigger on falling-edge
-		P2IFG &= ~nrfIRQpin;  // Clear any outstanding IRQ
-		P2IE |= nrfIRQpin;    // Enable IRQ interrupt
+		P2IES |= nrfIRQpin;   /* Trigger on falling-edge */
+		P2IFG &= ~nrfIRQpin;  /* Clear any outstanding IRQ */
+		P2IE |= nrfIRQpin;    /* Enable IRQ interrupt */
 	#elif nrfIRQport == 3
-		P3DIR &= ~nrfIRQpin;  // IRQ line is input
-		P3OUT |= nrfIRQpin;   // Pull-up resistor enabled
+		P3DIR &= ~nrfIRQpin;  /* IRQ line is input */
+		P3OUT |= nrfIRQpin;   /* Pull-up resistor enabled */
 		P3REN |= nrfIRQpin;
-		P3IES |= nrfIRQpin;   // Trigger on falling-edge
-		P3IFG &= ~nrfIRQpin;  // Clear any outstanding IRQ
-		P3IE |= nrfIRQpin;    // Enable IRQ interrupt
+		P3IES |= nrfIRQpin;   /* Trigger on falling-edge */
+		P3IFG &= ~nrfIRQpin;  /* Clear any outstanding IRQ */
+		P3IE |= nrfIRQpin;    /* Enable IRQ interrupt */
 	#elif nrfIRQport == 2
-		P4DIR &= ~nrfIRQpin;  // IRQ line is input
-		P4OUT |= nrfIRQpin;   // Pull-up resistor enabled
+		P4DIR &= ~nrfIRQpin;  /* IRQ line is input */
+		P4OUT |= nrfIRQpin;   /* Pull-up resistor enabled */
 		P4REN |= nrfIRQpin;
-		P4IES |= nrfIRQpin;   // Trigger on falling-edge
-		P4IFG &= ~nrfIRQpin;  // Clear any outstanding IRQ
-		P4IE |= nrfIRQpin;    // Enable IRQ interrupt
+		P4IES |= nrfIRQpin;   /* Trigger on falling-edge */
+		P4IFG &= ~nrfIRQpin;  /* Clear any outstanding IRQ */
+		P4IE |= nrfIRQpin;    /* Enable IRQ interrupt */
 	#endif
 
-	// Setup CSN/CE ports
+	/* Setup CSN/CE ports */
 	#if nrfCSNport == 1
 		P1DIR |= nrfCSNpin;
 	#elif nrfCSNport == 2
@@ -323,7 +333,7 @@ void msprf24_init()
 		P3DIR |= nrfCSNpin;
 	#elif nrfCSNport == 9
 		P3DIR |= nrfCSNpin;
-	#elif nrfCSNport == J
+	#elif nrfCSNport == 'J'
 		PJDIR |= nrfCSNpin;
 	#endif
 	CSN_DIS;
@@ -346,7 +356,7 @@ void msprf24_init()
 		P3DIR |= nrfCEpin;
 	#elif nrfCEport == 9
 		P3DIR |= nrfCEpin;
-	#elif nrfCEport == J
+	#elif nrfCEport == 'J'
 		PJDIR |= nrfCEpin;
 	#endif
 	CE_DIS;
@@ -357,25 +367,26 @@ void msprf24_init()
 	 */
 	spi_transfer(RF24_NOP);
 
-	// Wait 100ms for RF transceiver to initialize.
-	uint8_t c = 20;
-	for (; c; c--) {
-		__delay_cycles(DELAY_CYCLES_5MS);
+	/* Wait 100ms for RF transceiver to initialize. */
+	{
+		uint8_t c = 20;
+		for (; c; c--) {
+			__delay_cycles(DELAY_CYCLES_5MS);
+		}
 	}
-
-	// Configure RF transceiver with current value of rf_* configuration variables
-	msprf24_irq_clear(RF24_IRQ_MASK);  // Forget any outstanding IRQs
+	/* Configure RF transceiver with current value of rf_* configuration variables */
+	msprf24_irq_clear(RF24_IRQ_MASK);  /* Forget any outstanding IRQs */
 	msprf24_close_pipe_all();          /* Start off with no pipes enabled, let the user open as needed.  This also
 					    * clears the DYNPD register.
 					    */
-	msprf24_set_retransmit_delay(2000);  // A default I chose
-	msprf24_set_retransmit_count(15);    // A default I chose
+	msprf24_set_retransmit_delay(2000);  /* A default I chose */
+	msprf24_set_retransmit_count(15);    /* A default I chose */
 	msprf24_set_speed_power();
 	msprf24_set_channel();
 	msprf24_set_address_width();
-	rf_feature = 0x00;  // Initialize this so we're starting from a clean slate
-	msprf24_enable_feature(RF24_EN_DPL);      // Dynamic payload size capability (set with msprf24_set_pipe_packetsize(x, 0))
-	msprf24_enable_feature(RF24_EN_DYN_ACK);  // Ability to use w_tx_payload_noack()
+	rf_feature = 0x00;  /* Initialize this so we're starting from a clean slate */
+	msprf24_enable_feature(RF24_EN_DPL);      /* Dynamic payload size capability (set with msprf24_set_pipe_packetsize(x, 0)) */
+	msprf24_enable_feature(RF24_EN_DYN_ACK);  /* Ability to use w_tx_payload_noack() */
 
 	msprf24_powerdown();
 	flush_tx();
@@ -386,7 +397,7 @@ void msprf24_enable_feature(uint8_t feature)
 {
 	if ( (rf_feature & feature) != feature ) {
 		rf_feature |= feature;
-		rf_feature &= 0x07;  // Only bits 0, 1, 2 allowed to be set
+		rf_feature &= 0x07;  /* Only bits 0, 1, 2 allowed to be set */
 		w_reg(RF24_FEATURE, rf_feature);
 	}
 }
@@ -463,14 +474,14 @@ void msprf24_set_pipe_packetsize(uint8_t pipe, uint8_t size)
 
 	dynpdcfg = r_reg(RF24_DYNPD);
 	if (size < 1) {
-		if ( !(rf_feature & RF24_EN_DPL) )  // Cannot set dynamic payload if EN_DPL is disabled.
+		if ( !(rf_feature & RF24_EN_DPL) )  /* Cannot set dynamic payload if EN_DPL is disabled. */
 			return;
 		if (!( (1<<pipe) & dynpdcfg )) {
-			// DYNPD not enabled for this pipe, enable it
+			/* DYNPD not enabled for this pipe, enable it */
 			dynpdcfg |= 1 << pipe;
 		}
 	} else {
-		dynpdcfg &= ~(1 << pipe);  // Ensure DynPD is disabled for this pipe
+		dynpdcfg &= ~(1 << pipe);  /* Ensure DynPD is disabled for this pipe */
 		if (size > 32)
 			size = 32;
 		w_reg(RF24_RX_PW_P0 + pipe, size);
@@ -482,7 +493,7 @@ void msprf24_set_retransmit_delay(uint16_t us)
 {
 	uint8_t c;
 
-	// using 'c' to evaluate current RF speed
+	/* using 'c' to evaluate current RF speed */
 	c = rf_speed_power & RF24_SPEED_MASK;
 	if (us > 4000)
 		us = 4000;
@@ -491,7 +502,7 @@ void msprf24_set_retransmit_delay(uint16_t us)
 	if (us < 500)
 		us = 500;
 
-	// using 'c' to save current value of ARC (auto-retrans-count) since we're not changing that here
+	/* using 'c' to save current value of ARC (auto-retrans-count) since we're not changing that here */
 	c = r_reg(RF24_SETUP_RETR) & 0x0F;
 	us = (us-250) / 250;
 	us <<= 4;
@@ -506,27 +517,27 @@ void msprf24_set_retransmit_count(uint8_t count)
 	w_reg(RF24_SETUP_RETR, c | (count & 0x0F));
 }
 
-uint8_t msprf24_get_last_retransmits()
+uint8_t msprf24_get_last_retransmits(void)
 {
 	return r_reg(RF24_OBSERVE_TX) & 0x0F;
 }
 
-uint8_t msprf24_get_lostpackets()
+uint8_t msprf24_get_lostpackets(void)
 {
 	return (r_reg(RF24_OBSERVE_TX) >> 4) & 0x0F;
 }
 
-inline uint8_t _msprf24_crc_mask()
+inline uint8_t _msprf24_crc_mask(void)
 {
 	return (rf_crc & 0x0C);
 }
 
-inline uint8_t _msprf24_irq_mask()
+inline uint8_t _msprf24_irq_mask(void)
 {
 	return ~(RF24_MASK_RX_DR | RF24_MASK_TX_DS | RF24_MASK_MAX_RT);
 }
 
-uint8_t msprf24_is_alive()
+uint8_t msprf24_is_alive(void)
 {
 	uint8_t aw;
 
@@ -543,104 +554,104 @@ uint8_t msprf24_set_config(uint8_t cfgval)
 	return previous_config;
 }
 
-void msprf24_set_speed_power()
+void msprf24_set_speed_power(void)
 {
-	if ( (rf_speed_power & RF24_SPEED_MASK) == RF24_SPEED_MASK )  // Speed setting RF_DR_LOW=1, RF_DR_HIGH=1 is reserved, clamp it to minimum
+	if ( (rf_speed_power & RF24_SPEED_MASK) == RF24_SPEED_MASK )  /* Speed setting RF_DR_LOW=1, RF_DR_HIGH=1 is reserved, clamp it to minimum */
 		rf_speed_power = (rf_speed_power & ~RF24_SPEED_MASK) | RF24_SPEED_MIN;
 	w_reg(RF24_RF_SETUP, (rf_speed_power & 0x2F));
 }
 
-void msprf24_set_channel()
+void msprf24_set_channel(void)
 {
 	if (rf_channel > 125)
 		rf_channel = 0;
 	w_reg(RF24_RF_CH, (rf_channel & 0x7F));
 }
 
-void msprf24_set_address_width()
+void msprf24_set_address_width(void)
 {
 	if (rf_addr_width < 3 || rf_addr_width > 5)
 		return;
 	w_reg(RF24_SETUP_AW, ((rf_addr_width-2) & 0x03));
 }
 
-uint8_t msprf24_current_state()
+uint8_t msprf24_current_state(void)
 {
 	uint8_t config;
 
-	if (!msprf24_is_alive())               // Can't read/detect a valid value from SETUP_AW? (typically SPI or device fault)
+	if (!msprf24_is_alive())               /* Can't read/detect a valid value from SETUP_AW? (typically SPI or device fault) */
 		return RF24_STATE_NOTPRESENT;
 	config = r_reg(RF24_CONFIG);
-	if ( (config & RF24_PWR_UP) == 0x00 )  // PWR_UP=0?
+	if ( (config & RF24_PWR_UP) == 0x00 )  /* PWR_UP=0? */
 		return RF24_STATE_POWERDOWN;
-	if ( !(nrfCEportout & nrfCEpin) )      // PWR_UP=1 && CE=0?
+	if ( !(nrfCEportout & nrfCEpin) )      /* PWR_UP=1 && CE=0? */
 		return RF24_STATE_STANDBY_I;
-	if ( !(config & RF24_PRIM_RX) ) {      // PWR_UP=1 && CE=1 && PRIM_RX=0?
-		if ( (r_reg(RF24_FIFO_STATUS) & RF24_TX_EMPTY) )  // TX FIFO empty?
+	if ( !(config & RF24_PRIM_RX) ) {      /* PWR_UP=1 && CE=1 && PRIM_RX=0? */
+		if ( (r_reg(RF24_FIFO_STATUS) & RF24_TX_EMPTY) )  /* TX FIFO empty? */
 			return RF24_STATE_STANDBY_II;
-		return RF24_STATE_PTX; // If TX FIFO is not empty, we are in PTX (active transmit) mode.
+		return RF24_STATE_PTX; /* If TX FIFO is not empty, we are in PTX (active transmit) mode. */
 	}
-	if ( r_reg(RF24_RF_SETUP) & 0x90 )     // Testing CONT_WAVE or PLL_LOCK?
+	if ( r_reg(RF24_RF_SETUP) & 0x90 )     /* Testing CONT_WAVE or PLL_LOCK? */
 		return RF24_STATE_TEST;
-	return RF24_STATE_PRX;                 // PWR_UP=1, PRIM_RX=1, CE=1 -- Must be PRX
+	return RF24_STATE_PRX;                 /* PWR_UP=1, PRIM_RX=1, CE=1 -- Must be PRX */
 }
 
-// Power down device, 0.9uA power draw
-void msprf24_powerdown()
+/* Power down device, 0.9uA power draw */
+void msprf24_powerdown(void)
 {
 	CE_DIS;
-	msprf24_set_config(0);  // PWR_UP=0
+	msprf24_set_config(0);  /* PWR_UP=0 */
 }
 
-// Enable Standby-I, 26uA power draw
-void msprf24_standby()
+/* Enable Standby-I, 26uA power draw */
+void msprf24_standby(void)
 {
 	uint8_t state = msprf24_current_state();
 	if (state == RF24_STATE_NOTPRESENT || state == RF24_STATE_STANDBY_I)
 		return;
 	CE_DIS;
-	msprf24_set_config(RF24_PWR_UP);  // PWR_UP=1, PRIM_RX=0
-	if (state == RF24_STATE_POWERDOWN) {  // If we're powering up from deep powerdown...
-		//CE_EN;  // This is a workaround for SI24R1 chips, though it seems to screw things up so disabled for now til I can obtain an SI24R1 for testing.
-		__delay_cycles(DELAY_CYCLES_5MS);  // Then wait 5ms for the crystal oscillator to spin up.
-		//CE_DIS;
+	msprf24_set_config(RF24_PWR_UP);  /* PWR_UP=1, PRIM_RX=0 */
+	if (state == RF24_STATE_POWERDOWN) {  /* If we're powering up from deep powerdown... */
+		/* CE_EN;  // This is a workaround for SI24R1 chips, though it seems to screw things up so disabled for now til I can obtain an SI24R1 for testing. */
+		__delay_cycles(DELAY_CYCLES_5MS);  /* Then wait 5ms for the crystal oscillator to spin up. */
+		/* CE_DIS; */
 	}
 }
 
-// Enable PRX mode
-void msprf24_activate_rx()
+/* Enable PRX mode */
+void msprf24_activate_rx(void)
 {
 	msprf24_standby();
-	// Purge any existing RX FIFO or RX interrupts
+	/* Purge any existing RX FIFO or RX interrupts */
 	flush_rx();
 	w_reg(RF24_STATUS, RF24_RX_DR);
 
-	// Enable PRIM_RX
+	/* Enable PRIM_RX */
 	msprf24_set_config(RF24_PWR_UP | RF24_PRIM_RX);
 	CE_EN;
-	// 130uS required for PLL lock to stabilize, app can go do other things and wait
-	// for incoming I/O.
+	/* 130uS required for PLL lock to stabilize, app can go do other things and wait */
+	/* for incoming I/O. */
 }
 
-// Enable Standby-II / PTX mode
+/* Enable Standby-II / PTX mode */
 /* Standby-II is enabled if the TX FIFO is empty, otherwise the chip enters PTX
  *     mode to send the TX FIFO buffer contents until it's all done, at which point
  *     the chip falls back to Standby-II again.
  */
-void msprf24_activate_tx()
+void msprf24_activate_tx(void)
 {
 	msprf24_standby();
-	// Cancel any outstanding TX interrupt
+	/* Cancel any outstanding TX interrupt */
 	w_reg(RF24_STATUS, RF24_TX_DS|RF24_MAX_RT);
 
-	// Pulse CE for 10us to activate PTX
+	/* Pulse CE for 10us to activate PTX */
 	pulse_ce();
 }
 
 /* Evaluate state of TX, RX FIFOs
  * Compare this with RF24_QUEUE_* #define's from msprf24.h
  */
-uint8_t msprf24_queue_state()
+uint8_t msprf24_queue_state(void)
 {
 	return r_reg(RF24_FIFO_STATUS);
 }
@@ -648,7 +659,7 @@ uint8_t msprf24_queue_state()
 /* Scan current channel for activity, produce an 8-bit integer indicating % of time
  * spent with RPD=1 (valid RF activity present) for a 133ms period.
  */
-uint8_t msprf24_scan()
+uint8_t msprf24_scan(void)
 {
 	int testcount = 1023;
 	uint16_t rpdcount = 0;
@@ -667,12 +678,12 @@ uint8_t msprf24_scan()
 						  */
 	}
 	if (last_state != RF24_STATE_PRX)
-		msprf24_standby();  // If we weren't in RX mode before, leave it in Standby-I.
+		msprf24_standby();  /* If we weren't in RX mode before, leave it in Standby-I. */
 	return( (uint8_t) (rpdcount/4) );
 }
 
-// Check if there is pending RX fifo data
-uint8_t msprf24_rx_pending()
+/* Check if there is pending RX fifo data */
+uint8_t msprf24_rx_pending(void)
 {
 	CSN_EN;
 	rf_status = spi_transfer(RF24_NOP);
@@ -683,12 +694,12 @@ uint8_t msprf24_rx_pending()
 	return 0;
 }
 
-// Get IRQ flag status
-uint8_t msprf24_get_irq_reason()
+/* Get IRQ flag status */
+uint8_t msprf24_get_irq_reason(void)
 {
 	uint8_t rf_irq_old = rf_irq;
 
-	//rf_irq &= ~RF24_IRQ_FLAGGED;  -- Removing in lieu of having this check determined at irq_clear() time
+	/* rf_irq &= ~RF24_IRQ_FLAGGED;  -- Removing in lieu of having this check determined at irq_clear() time */
 	CSN_EN;
 	rf_status = spi_transfer(RF24_NOP);
 	CSN_DIS;
@@ -701,20 +712,20 @@ void msprf24_irq_clear(uint8_t irqflag)
 {
 	uint8_t fifostat;
 
-	rf_irq = 0x00;  // Clear IRQs; afterward analyze RX FIFO to see if we should re-set RX IRQ flag.
+	rf_irq = 0x00;  /* Clear IRQs; afterward analyze RX FIFO to see if we should re-set RX IRQ flag. */
 	CSN_EN;
 	rf_status = spi_transfer(RF24_STATUS | RF24_W_REGISTER);
 	spi_transfer(irqflag);
 	CSN_DIS;
 
-	// Per datasheet procedure, check FIFO_STATUS to see if there's more RX FIFO data to process.
+	/* Per datasheet procedure, check FIFO_STATUS to see if there's more RX FIFO data to process. */
 	if (irqflag & RF24_IRQ_RX) {
 		CSN_EN;
 		rf_status = spi_transfer(RF24_FIFO_STATUS | RF24_R_REGISTER);
 		fifostat = spi_transfer(RF24_NOP);
 		CSN_DIS;
 		if ( !(fifostat & RF24_RX_EMPTY) )
-			rf_irq |= RF24_IRQ_RX | RF24_IRQ_FLAGGED;  // Signal to user that there is remaining data, even if it's not "new"
+			rf_irq |= RF24_IRQ_RX | RF24_IRQ_FLAGGED;  /* Signal to user that there is remaining data, even if it's not "new" */
 	}
 }
 
@@ -729,7 +740,7 @@ void msprf24_irq_clear(uint8_t irqflag)
 
 /*      -       -       Interrupt vectors       -       -       */
 
-// RF transceiver IRQ handling
+/* RF transceiver IRQ handling */
 #if   nrfIRQport == 2
   #ifdef __GNUC__
   __attribute__((interrupt(PORT2_VECTOR)))
@@ -739,9 +750,9 @@ void msprf24_irq_clear(uint8_t irqflag)
   __interrupt void P2_IRQ (void) {
   #endif
 	if(P2IFG & nrfIRQpin) {
-		__bic_SR_register_on_exit(LPM4_bits);    // Wake up
+		__bic_SR_register_on_exit(LPM4_bits);    /* Wake up */
 		rf_irq |= RF24_IRQ_FLAGGED;
-		P2IFG &= ~nrfIRQpin;   // Clear interrupt flag
+		P2IFG &= ~nrfIRQpin;   /* Clear interrupt flag */
 	}
 }
 

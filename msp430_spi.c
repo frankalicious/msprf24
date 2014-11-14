@@ -32,8 +32,8 @@ void spi_init()
 {
 	/* USI SPI setup */
 	USICTL0 |= USISWRST;
-	USICTL1 = USICKPH;                // USICKPH=1 means sampling is done on the leading edge of the clock
-	USICKCTL = USISSEL_2 | USIDIV_0;  // Clock source = SMCLK/1
+	USICTL1 = USICKPH;                /* USICKPH=1 means sampling is done on the leading edge of the clock */
+	USICKCTL = USISSEL_2 | USIDIV_0;  /* Clock source = SMCLK/1 */
 	USICTL0 = USIPE7 | USIPE6 | USIPE5 | USIMST | USIOE;
 	USISR = 0x0000;
 }
@@ -41,7 +41,7 @@ void spi_init()
 uint8_t spi_transfer(uint8_t inb)
 {
 	USISRL = inb;
-	USICNT = 8;            // Start SPI transfer
+	USICNT = 8;            /* Start SPI transfer */
 	while ( !(USICTL1 & USIIFG) )
 		;
 	return USISRL;
@@ -51,7 +51,7 @@ uint8_t spi_transfer(uint8_t inb)
 uint16_t spi_transfer16(uint16_t inw)
 {
 	USISR = inw;
-	USICNT = 16 | USI16B;  // Start 16-bit SPI transfer
+	USICNT = 16 | USI16B;  /* Start 16-bit SPI transfer */
 	while ( !(USICTL1 & USIIFG) )
 		;
 	return USISR;
@@ -61,7 +61,7 @@ uint16_t spi_transfer16(uint16_t inw)
 uint16_t spi_transfer9(uint16_t inw)
 {
 	USISR = inw;
-	USICNT = 9 | USI16B;  // Start 9-bit SPI transfer
+	USICNT = 9 | USI16B;  /* Start 9-bit SPI transfer */
 	while ( !(USICTL1 & USIIFG) )
 		;
 	return USISR;
@@ -73,7 +73,7 @@ uint16_t spi_transfer9(uint16_t inw)
  * 16-bit integer.
  */
 
-// USCI for F2xxx and G2xx3 devices
+/* USCI for F2xxx and G2xx3 devices */
 #if defined(__MSP430_HAS_USCI__) && defined(SPI_DRIVER_USCI_A) && !defined(__MSP430_HAS_TB3__)
 void spi_init()
 {
@@ -83,17 +83,17 @@ void spi_init()
 
 	/* USCI-A specific SPI setup */
 	UCA0CTL1 |= UCSWRST;
-	UCA0MCTL = 0x00;  // Clearing modulation control per TI user's guide recommendation
-	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCA0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCA0MCTL = 0x00;  /* Clearing modulation control per TI user's guide recommendation */
+	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  /* SPI mode 0, master */
+	UCA0BR0 = 0x01;  /* SPI clocked at same speed as SMCLK */
 	UCA0BR1 = 0x00;
-	UCA0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_A module.
+	UCA0CTL1 = UCSSEL_2;  /* Clock = SMCLK, clear UCSWRST and enables USCI_A module. */
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(IFG2 & UCA0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(IFG2 & UCA0RXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCA0RXBUF;
 }
@@ -127,7 +127,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P1SEL &= ~(BIT1 | BIT2 | BIT4);
 	P1SEL2 &= ~(BIT1 | BIT2 | BIT4);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P1OUT |= BIT2;
 	P1OUT |= BIT4;
@@ -135,7 +135,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P1OUT &= ~BIT4;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P1SEL |= BIT1 | BIT2 | BIT4;
 	P1SEL2 |= BIT1 | BIT2 | BIT4;
 	P1DIR = p1dir_save;
@@ -156,16 +156,16 @@ void spi_init()
 
 	/* USCI-B specific SPI setup */
 	UCB0CTL1 |= UCSWRST;
-	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCB0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  /* SPI mode 0, master */
+	UCB0BR0 = 0x01;  /* SPI clocked at same speed as SMCLK */
 	UCB0BR1 = 0x00;
-	UCB0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_B module.
+	UCB0CTL1 = UCSSEL_2;  /* Clock = SMCLK, clear UCSWRST and enables USCI_B module. */
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCB0TXBUF = inb;
-	while ( !(IFG2 & UCB0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(IFG2 & UCB0RXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCB0RXBUF;
 }
@@ -199,7 +199,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P1SEL &= ~(BIT5 | BIT6 | BIT7);
 	P1SEL2 &= ~(BIT5 | BIT6 | BIT7);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P1OUT |= BIT7;
 	P1OUT |= BIT5;
@@ -207,7 +207,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P1OUT &= ~BIT5;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P1SEL |= BIT5 | BIT6 | BIT7;
 	P1SEL2 |= BIT5 | BIT6 | BIT7;
 	P1DIR = p1dir_save;
@@ -219,7 +219,7 @@ uint16_t spi_transfer9(uint16_t inw)
 }
 #endif
 
-// USCI for G2xx4/G2xx5 devices
+/* USCI for G2xx4/G2xx5 devices */
 #if defined(__MSP430_HAS_USCI__) && defined(SPI_DRIVER_USCI_A) && defined(__MSP430_HAS_TB3__)
 void spi_init()
 {
@@ -229,17 +229,17 @@ void spi_init()
 
 	/* USCI-A specific SPI setup */
 	UCA0CTL1 |= UCSWRST;
-	UCA0MCTL = 0x00;  // Clearing modulation control per TI user's guide recommendation
-	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCA0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCA0MCTL = 0x00;  /* Clearing modulation control per TI user's guide recommendation */
+	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  /* SPI mode 0, master */
+	UCA0BR0 = 0x01;  /* SPI clocked at same speed as SMCLK */
 	UCA0BR1 = 0x00;
-	UCA0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_A module.
+	UCA0CTL1 = UCSSEL_2;  /* Clock = SMCLK, clear UCSWRST and enables USCI_A module. */
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(IFG2 & UCA0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(IFG2 & UCA0RXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCA0RXBUF;
 }
@@ -273,7 +273,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P3SEL &= ~(BIT0 | BIT4 | BIT5);
 	P3SEL2 &= ~(BIT0 | BIT4 | BIT5);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P3OUT |= BIT4;
 	P3OUT |= BIT0;
@@ -281,7 +281,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P3OUT &= ~BIT0;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P3SEL |= BIT0 | BIT4 | BIT5;
 	P3DIR = p3dir_save;
 	P3OUT = p3out_save;
@@ -301,16 +301,16 @@ void spi_init()
 
 	/* USCI-B specific SPI setup */
 	UCB0CTL1 |= UCSWRST;
-	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCB0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  /* SPI mode 0, master */
+	UCB0BR0 = 0x01;  /* SPI clocked at same speed as SMCLK */
 	UCB0BR1 = 0x00;
-	UCB0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_B module.
+	UCB0CTL1 = UCSSEL_2;  /* Clock = SMCLK, clear UCSWRST and enables USCI_B module. */
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCB0TXBUF = inb;
-	while ( !(IFG2 & UCB0RXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(IFG2 & UCB0RXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCB0RXBUF;
 }
@@ -344,7 +344,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P3SEL &= ~(BIT1 | BIT2 | BIT3);
 	P3SEL2 &= ~(BIT1 | BIT2 | BIT3);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P3OUT |= BIT1;
 	P3OUT |= BIT3;
@@ -352,7 +352,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P3OUT &= ~BIT3;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P3SEL |= BIT1 | BIT2 | BIT3;
 	P3DIR = p3dir_save;
 	P3OUT = p3out_save;
@@ -363,7 +363,7 @@ uint16_t spi_transfer9(uint16_t inw)
 }
 #endif
 
-// USCI for F5xxx/6xxx devices--F5172 specific P1SEL settings
+/* USCI for F5xxx/6xxx devices--F5172 specific P1SEL settings */
 #if defined(__MSP430_HAS_USCI_A0__) && defined(SPI_DRIVER_USCI_A)
 void spi_init()
 {
@@ -378,17 +378,17 @@ void spi_init()
 
 	/* USCI-A specific SPI setup */
 	UCA0CTL1 |= UCSWRST;
-	UCA0MCTL = 0x00;  // Clearing modulation control per TI user's guide recommendation
-	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCA0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCA0MCTL = 0x00;  /* Clearing modulation control per TI user's guide recommendation */
+	UCA0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  /* SPI mode 0, master */
+	UCA0BR0 = 0x01;  /* SPI clocked at same speed as SMCLK */
 	UCA0BR1 = 0x00;
-	UCA0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_A module.
+	UCA0CTL1 = UCSSEL_2;  /* Clock = SMCLK, clear UCSWRST and enables USCI_A module. */
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(UCA0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(UCA0IFG & UCRXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCA0RXBUF;
 }
@@ -422,7 +422,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P1DIR = (P1DIR & ~(BIT0 | BIT1 | BIT2)) | BIT0 | BIT1;
 	P1SEL &= ~(BIT0 | BIT1 | BIT2);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P1OUT |= BIT1;
 	P1OUT |= BIT0;
@@ -430,7 +430,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P1OUT &= ~BIT0;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P1SEL |= BIT0 | BIT1 | BIT2;
 	P1DIR = p1dir_save;
 	P1OUT = p1out_save;
@@ -456,7 +456,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P3DIR = (P3DIR | ~(BIT3 | BIT4)) | BIT3; P2DIR |= BIT7;
 	P3SEL &= ~(BIT3 | BIT4); P2SEL &= ~BIT7;
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P3OUT |= BIT3;
 	P2OUT |= BIT7;
@@ -464,7 +464,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P2OUT &= ~BIT7;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P3SEL |= BIT3 | BIT4; P2SEL |= BIT7;
 	P3DIR = p3dir_save; P2DIR = p2dir_save;
 	P3OUT = p3out_save; P2OUT = p2out_save;
@@ -490,16 +490,16 @@ void spi_init()
 
 	/* USCI-B specific SPI setup */
 	UCB0CTL1 |= UCSWRST;
-	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  // SPI mode 0, master
-	UCB0BR0 = 0x01;  // SPI clocked at same speed as SMCLK
+	UCB0CTL0 = UCCKPH | UCMSB | UCMST | UCMODE_0 | UCSYNC;  /* SPI mode 0, master */
+	UCB0BR0 = 0x01;  /* SPI clocked at same speed as SMCLK */
 	UCB0BR1 = 0x00;
-	UCB0CTL1 = UCSSEL_2;  // Clock = SMCLK, clear UCSWRST and enables USCI_B module.
+	UCB0CTL1 = UCSSEL_2;  /* Clock = SMCLK, clear UCSWRST and enables USCI_B module. */
 }
 
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCB0TXBUF = inb;
-	while ( !(UCB0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(UCB0IFG & UCRXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCB0RXBUF;
 }
@@ -533,7 +533,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P1DIR = (P1DIR & ~(BIT3 | BIT4 | BIT5)) | BIT3 | BIT4;
 	P1SEL &= ~(BIT3 | BIT4 | BIT5);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P1OUT |= BIT4;
 	P1OUT |= BIT3;
@@ -541,7 +541,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P1OUT &= ~BIT3;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P1SEL |= BIT3 | BIT4 | BIT5;
 	P1DIR = p1dir_save;
 	P1OUT = p1out_save;
@@ -565,7 +565,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P3DIR = (P3DIR & ~(BIT0 | BIT1 | BIT2)) | BIT0 | BIT2;
 	P3SEL &= ~(BIT0 | BIT1 | BIT2);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P3OUT |= BIT0;
 	P3OUT |= BIT2;
@@ -573,7 +573,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P3OUT &= ~BIT2;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P3SEL |= BIT0 | BIT1 | BIT2;
 	P3DIR = p3dir_save;
 	P3OUT = p3out_save;
@@ -586,7 +586,7 @@ uint16_t spi_transfer9(uint16_t inw)
 
 #endif
 
-// Wolverine and other FRAM series chips
+/* Wolverine and other FRAM series chips */
 #if defined(__MSP430_HAS_EUSCI_A0__) && (defined(SPI_DRIVER_USCI_A) || defined(SPI_DRIVER_USCI_A0))
 void spi_init()
 {
@@ -611,7 +611,7 @@ void spi_init()
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA0TXBUF = inb;
-	while ( !(UCA0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(UCA0IFG & UCRXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCA0RXBUF;
 }
@@ -653,7 +653,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P1SEL1 &= ~BIT5;
 	P2SEL1 &= ~(BIT0 | BIT1);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P2OUT |= BIT0;
 	P1OUT |= BIT5;
@@ -661,7 +661,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P1OUT &= ~BIT5;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P1SEL1 |= BIT5;
 	P2SEL1 |= BIT0 | BIT1;
 
@@ -701,7 +701,7 @@ void spi_init()
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCA1TXBUF = inb;
-	while ( !(UCA1IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(UCA1IFG & UCRXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCA1RXBUF;
 }
@@ -737,7 +737,7 @@ uint16_t spi_transfer9(uint16_t inw)
 
 	P2SEL1 &= ~(BIT0 | BIT1);
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P2OUT |= BIT5;
 	P2OUT |= BIT4;
@@ -745,7 +745,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P2OUT &= ~BIT4;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P2SEL1 |= BIT0 | BIT1;
 
 	P2DIR = p2dir_save;
@@ -782,7 +782,7 @@ void spi_init()
 uint8_t spi_transfer(uint8_t inb)
 {
 	UCB0TXBUF = inb;
-	while ( !(UCB0IFG & UCRXIFG) )  // Wait for RXIFG indicating remote byte received via SOMI
+	while ( !(UCB0IFG & UCRXIFG) )  /* Wait for RXIFG indicating remote byte received via SOMI */
 		;
 	return UCB0RXBUF;
 }
@@ -824,7 +824,7 @@ uint16_t spi_transfer9(uint16_t inw)
 	P1SEL1 &= ~(BIT6 | BIT7);
 	P2SEL1 &= ~BIT2;
 
-	// Perform single-bit transfer
+	/* Perform single-bit transfer */
 	if (inw & 0x0100)
 		P1OUT |= BIT6;
 	P2OUT |= BIT2;
@@ -832,7 +832,7 @@ uint16_t spi_transfer9(uint16_t inw)
 		retw |= 0x0100;
 	P2OUT &= ~BIT2;
 
-	// Restore port states and continue with 8-bit SPI
+	/* Restore port states and continue with 8-bit SPI */
 	P1SEL1 |= BIT6 | BIT7;
 	P2SEL1 |= BIT2;
 
